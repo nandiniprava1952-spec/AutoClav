@@ -400,11 +400,22 @@ footer.sourcebar{margin-top:10px; font-size:11px; color:var(--ink-soft); text-al
 <div id="loginOverlay" style="display:none; position:fixed; inset:0; z-index:300; background:linear-gradient(135deg,#081d33,#0d3b63 55%,#0e7c9e); align-items:center; justify-content:center; padding:20px;">
   <div style="background:#fff; border-radius:14px; padding:26px 26px 20px; width:min(380px,100%); box-shadow:0 20px 50px rgba(0,0,0,.35);">
     <h2 style="margin:0 0 4px; color:var(--navy2); font-size:19px;">🧪 Autoclave Operation Dashboard</h2>
-    <p style="margin:0 0 16px; font-size:12.5px; color:var(--ink-soft);">Choose your district and enter its password. You will only see your own district's data.</p>
+    <div id="loginLevel" style="display:flex; gap:4px; background:#eef2f5; border-radius:10px; padding:3px; margin:0 0 14px;">
+      <button type="button" id="lvlDistrict" onclick="setLoginLevel('district')" style="flex:1; border:0; padding:8px 6px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">District login</button>
+      <button type="button" id="lvlBlock" onclick="setLoginLevel('block')" style="flex:1; border:0; padding:8px 6px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">Block login</button>
+    </div>
+    <p id="loginHint" style="margin:0 0 14px; font-size:12.5px; color:var(--ink-soft);"></p>
     <label style="font-size:11.5px; font-weight:700;">District</label>
-    <select id="loginDistrict" style="width:100%; box-sizing:border-box; margin:4px 0 12px; padding:9px 10px; border:1px solid #c5d2dc; border-radius:8px; font-size:14px; background:#fff;"><option value="">Select your district…</option></select>
-    <label style="font-size:11.5px; font-weight:700;">Password</label>
-    <input id="loginPass" type="password" autocomplete="current-password" style="width:100%; box-sizing:border-box; margin:4px 0 8px; padding:9px 10px; border:1px solid #c5d2dc; border-radius:8px; font-size:14px;">
+    <select id="loginDistrict" onchange="fillLoginBlocks()" style="width:100%; box-sizing:border-box; margin:4px 0 12px; padding:9px 10px; border:1px solid #c5d2dc; border-radius:8px; font-size:14px; background:#fff;"><option value="">Select your district…</option></select>
+    <div id="loginBlockWrap" style="display:none;">
+      <label style="font-size:11.5px; font-weight:700;">Block</label>
+      <select id="loginBlock" style="width:100%; box-sizing:border-box; margin:4px 0 12px; padding:9px 10px; border:1px solid #c5d2dc; border-radius:8px; font-size:14px; background:#fff;"><option value="">Select your block…</option></select>
+    </div>
+    <label id="loginPassLbl" style="font-size:11.5px; font-weight:700;">Password</label>
+    <div style="position:relative; margin:4px 0 8px;">
+      <input id="loginPass" type="password" autocomplete="current-password" style="width:100%; box-sizing:border-box; padding:9px 56px 9px 10px; border:1px solid #c5d2dc; border-radius:8px; font-size:14px;">
+      <button type="button" onclick="var i=document.getElementById('loginPass'); i.type=i.type==='password'?'text':'password'; this.textContent=i.type==='password'?'Show':'Hide';" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:none; color:var(--navy2); font-size:12px; font-weight:700; cursor:pointer;">Show</button>
+    </div>
     <div id="loginConn" style="font-size:11.5px; color:var(--ink-soft); margin-bottom:6px;">Checking cloud connection…</div>
     <div id="loginErr" style="color:#b3261e; min-height:18px; font-size:12.5px; margin-bottom:8px;"></div>
     <button type="button" class="btn" id="loginBtn" onclick="cloudLogin()" style="width:100%;">Sign in</button>
@@ -413,8 +424,8 @@ footer.sourcebar{margin-top:10px; font-size:11px; color:var(--ink-soft); text-al
 </div>
 <div id="pwModal" style="display:none; position:fixed; inset:0; z-index:310; background:rgba(10,25,38,.6); align-items:center; justify-content:center; padding:20px;">
   <div style="background:#fff; border-radius:14px; padding:22px; width:min(360px,100%);">
-    <h3 style="margin:0 0 4px; color:var(--navy2);">Change password</h3>
-    <p style="margin:0 0 10px; font-size:12px; color:var(--ink-soft);">Choose a new password (at least 8 characters). Next time, sign in with your district and the new password.</p>
+    <h3 id="pwTitle" style="margin:0 0 4px; color:var(--navy2);">Change password / passcode</h3>
+    <p style="margin:0 0 10px; font-size:12px; color:var(--ink-soft);">Choose a new password or passcode (district: at least 8 characters, block: at least 6). Next time, sign in with the new one.</p>
     <input id="pwOld" type="password" placeholder="Current password" autocomplete="current-password" style="width:100%; box-sizing:border-box; margin-bottom:8px; padding:9px 10px; border:1px solid #c5d2dc; border-radius:8px;">
     <input id="pwNew" type="password" placeholder="New password (min 8 characters)" autocomplete="new-password" style="width:100%; box-sizing:border-box; margin-bottom:8px; padding:9px 10px; border:1px solid #c5d2dc; border-radius:8px;">
     <input id="pwNew2" type="password" placeholder="Repeat new password" autocomplete="new-password" style="width:100%; box-sizing:border-box; margin-bottom:8px; padding:9px 10px; border:1px solid #c5d2dc; border-radius:8px;">
@@ -918,17 +929,66 @@ async function cloudCall(action, payload){
   throw lastErr;
 }
 
+let LOGIN_LEVEL = 'district';
+function setLoginLevel(lv){
+  LOGIN_LEVEL = lv;
+  const on = 'background:#fff; color:#0d3b63; box-shadow:0 1px 3px rgba(0,0,0,.15);', off = 'background:transparent; color:#5c7488;';
+  const base = 'flex:1; border:0; padding:8px 6px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;';
+  document.getElementById('lvlDistrict').style.cssText = base + (lv==='district' ? on : off);
+  document.getElementById('lvlBlock').style.cssText = base + (lv==='block' ? on : off);
+  document.getElementById('loginBlockWrap').style.display = lv==='block' ? 'block' : 'none';
+  document.getElementById('loginPassLbl').textContent = lv==='block' ? 'Block passcode' : 'Password';
+  document.getElementById('loginHint').textContent = lv==='block'
+    ? 'Choose your district and block, then enter the block passcode. You will only see your own block\'s data.'
+    : 'Choose your district and enter its password. You will only see your own district\'s data.';
+  document.getElementById('loginErr').textContent = '';
+  try{ localStorage.setItem('ad_last_level', lv); }catch(e){}
+}
+function fillLoginBlocks(keep){
+  const d = document.getElementById('loginDistrict').value, bsel = document.getElementById('loginBlock');
+  bsel.innerHTML = '<option value="">Select your block…</option>';
+  (GEO.block||[]).filter(b=>b.dist_code===d)
+    .sort((x,y)=>String(x['label::English (en)']).localeCompare(String(y['label::English (en)'])))
+    .forEach(b=>{ const o = document.createElement('option'); o.value = b.name; o.textContent = b['label::English (en)']; bsel.appendChild(o); });
+  if(keep && [...bsel.options].some(o=>o.value===keep)) bsel.value = keep;
+}
+/* Which rows may this user see? (the Apps Script must ALSO enforce this on the server) */
+function blockCodeOf(r){
+  const v = String(get(r,'block')||'').trim(); if(!v) return '';
+  const lv = v.toLowerCase(), dn = cloudNorm(get(r,'district'));
+  const hit = (GEO.block||[]).find(b=>b.name===v) || (GEO.block||[]).find(b=>String(b['label::English (en)']).toLowerCase()===lv && cloudNorm(b.dist_code)===dn);
+  return hit ? hit.name : v;
+}
+function cloudIsBlock(){ return !!(CLOUD && CLOUD.user && CLOUD.user.role === 'block'); }
+function cloudRowAllowed(r){
+  if(!CLOUD || cloudIsAdmin()) return true;
+  const u = CLOUD.user;
+  const dv = cloudNorm(get(r,'district'));
+  if(dv !== cloudNorm(u.district) && dv !== cloudNorm(labelFor('district', u.district))) return false;
+  if(cloudIsBlock()){
+    const bv = cloudNorm(get(r,'block'));
+    if(bv !== cloudNorm(u.block) && bv !== cloudNorm(labelFor('block', u.block))) return false;
+  }
+  return true;
+}
+
 async function cloudLogin(){
   const d = document.getElementById('loginDistrict').value;
+  const bl = document.getElementById('loginBlock').value;
   const p = document.getElementById('loginPass').value;
+  const isBlock = LOGIN_LEVEL === 'block';
   const errEl = document.getElementById('loginErr'), btn = document.getElementById('loginBtn');
   if(!d){ errEl.textContent = 'Select your district.'; return; }
-  if(!p){ errEl.textContent = 'Enter the password.'; return; }
+  if(isBlock && !bl){ errEl.textContent = 'Select your block.'; return; }
+  if(!p){ errEl.textContent = isBlock ? 'Enter the block passcode.' : 'Enter the password.'; return; }
   errEl.textContent = ''; btn.disabled = true; btn.textContent = 'Signing in…';
   try{
-    const out = await cloudCall('login', {username:d, password:p});
+    const out = await cloudCall('login', isBlock
+      ? {level:'block', username:bl, district:d, block:bl, password:p}
+      : {level:'district', username:d, password:p});
     CLOUD = {token: out.token, user: out.user};
-    try{ localStorage.setItem('ad_last_district', d); }catch(e){}
+    if(isBlock){ CLOUD.user.role = 'block'; CLOUD.user.district = CLOUD.user.district || d; CLOUD.user.block = CLOUD.user.block || bl; }
+    try{ localStorage.setItem('ad_last_district', d); if(isBlock) localStorage.setItem('ad_last_block', bl); }catch(e){}
     try{ sessionStorage.setItem('ad_cloud', JSON.stringify(CLOUD)); }catch(e){}
     document.getElementById('loginPass').value = '';
     cloudAfterLogin();
@@ -955,7 +1015,7 @@ function cloudAfterLogin(){
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('cloudGrp').style.display = 'flex';
   const d = CLOUD.user.district;
-  document.getElementById('cloudUser').textContent = '👤 ' + (cloudIsAdmin() ? 'Admin · all districts' : labelFor('district', d) + ' district');
+  document.getElementById('cloudUser').textContent = '👤 ' + (cloudIsAdmin() ? 'Admin · all districts' : cloudIsBlock() ? labelFor('block', CLOUD.user.block) + ' block · ' + labelFor('district', d) : labelFor('district', d) + ' district');
   cloudPull().then(cloudLoadPhotos);   // one after the other, so Google does not drop a request
 }
 
@@ -973,7 +1033,7 @@ async function cloudPull(){
     while(offset !== null && offset !== undefined){
       cloudStatus('Downloading… ' + all.length);
       const out = await cloudCall('pull', {offset: offset, limit: 300});
-      out.rows.forEach(r=>all.push(r));
+      out.rows.forEach(r=>{ if(cloudRowAllowed(r)) all.push(r); });
       offset = out.next;
     }
     RAW_HEADER_ORDER = [];
@@ -1021,15 +1081,15 @@ async function cloudUploadPhotos(manual){
   if(!CLOUD || PHOTO_UPLOADING || !Object.keys(zipPhotoMap).length){
     if(manual) cloudStatus('Load a ZIP that contains photos first.', 'err'); return;
   }
-  const todo = {};      // filename -> district
+  const todo = {};      // filename -> {d: district, b: block code}
   RAW.forEach(r=>{
     const d = cloudNorm(get(r,'district'));
-    if(!cloudIsAdmin() && d !== cloudNorm(CLOUD.user.district)) return;
+    if(!cloudRowAllowed(r)) return;
     for(const k in r){
       const v = String(r[k]==null ? '' : r[k]).trim();
       if(!/\.(jpe?g|png|gif|bmp|webp)$/i.test(v)) continue;
       const n = v.split(/[\\/]/).pop().trim().toLowerCase();
-      if(zipPhotoMap[n] && !cloudPhotoMap[n] && d) todo[n] = d;
+      if(zipPhotoMap[n] && !cloudPhotoMap[n] && d) todo[n] = {d: d, b: blockCodeOf(r)};
     }
   });
   const names = Object.keys(todo);
@@ -1043,7 +1103,7 @@ async function cloudUploadPhotos(manual){
         const e = zipPhotoMap[n];
         const raw = e.async ? new Blob([await e.async('uint8array')], {type: mimeFor(n)}) : e;
         const b64 = await blobToB64(await shrinkImage(raw));
-        await cloudCall('photoPut', {name: n, district: todo[n], mime: 'image/jpeg', data: b64});
+        await cloudCall('photoPut', {name: n, district: todo[n].d, block: todo[n].b, mime: 'image/jpeg', data: b64});
       }catch(err){ failed++; if(err.message === 'Session expired') { i = names.length; } }
       done++; cloudStatus('📷 Uploading photos ' + done + ' / ' + names.length + (failed ? ' · ' + failed + ' failed' : '') + '…');
     }
@@ -1066,7 +1126,7 @@ async function cloudPush(rows){
   const items = rows.map(r=>{
     const data = {};
     for(const k in r){ const v = r[k]; if(v!==undefined && v!==null && String(v).trim()!=='') data[k] = v; }
-    return {key: cloudRowKey(r), data: data};
+    return {key: cloudRowKey(r), data: data, block: blockCodeOf(r)};
   });
   const tot = {added:0, updated:0, unchanged:0, rejected:0, skipped:0};
   for(let i=0; i<items.length; i+=250){
@@ -1080,14 +1140,14 @@ async function cloudPush(rows){
 async function cloudSyncFile(rows, name){
   const statusEl = document.getElementById('status');
   statusEl.className = ''; statusEl.textContent = 'Uploading ' + name + ' to the cloud…';
-  const mine = cloudIsAdmin() ? rows : rows.filter(r=>cloudNorm(get(r,'district')) === cloudNorm(CLOUD.user.district));
+  const mine = rows.filter(cloudRowAllowed);
   const ignored = rows.length - mine.length;
   try{
     const t = await cloudPush(mine);
     await cloudPull();
     cloudUploadPhotos(false);
     cloudStatus('☁ ' + t.added + ' new · ' + t.updated + ' updated · ' + t.unchanged + ' unchanged' +
-      ((ignored + t.rejected) ? ' · ' + (ignored + t.rejected) + ' rows of other districts ignored' : '') +
+      ((ignored + t.rejected) ? ' · ' + (ignored + t.rejected) + ' rows outside your ' + (cloudIsBlock() ? 'block' : 'district') + ' ignored' : '') +
       ' · ' + new Date().toLocaleTimeString(), 'ok');
   }catch(e){
     if(e.message === 'Session expired') return;
@@ -1101,7 +1161,8 @@ function closePwModal(){ document.getElementById('pwModal').style.display='none'
 async function cloudChangePassword(){
   const o = document.getElementById('pwOld').value, n = document.getElementById('pwNew').value, n2 = document.getElementById('pwNew2').value;
   const m = document.getElementById('pwMsg'); m.style.color = '#b3261e';
-  if(n.length < 8){ m.textContent = 'New password must be at least 8 characters.'; return; }
+  const minLen = cloudIsBlock() ? 6 : 8;
+  if(n.length < minLen){ m.textContent = 'New ' + (cloudIsBlock() ? 'passcode' : 'password') + ' must be at least ' + minLen + ' characters.'; return; }
   if(n !== n2){ m.textContent = 'The new passwords do not match.'; return; }
   try{
     await cloudCall('changePassword', {oldPassword:o, newPassword:n});
@@ -1115,6 +1176,9 @@ const LOGIN_DISTRICTS = [['angul','Angul'],['balangir','Balangir'],['balasore','
   const dsel = document.getElementById('loginDistrict');
   LOGIN_DISTRICTS.forEach(([v,t])=>{ const o = document.createElement('option'); o.value = v; o.textContent = t; dsel.appendChild(o); });
   try{ const last = localStorage.getItem('ad_last_district'); if(last && LOGIN_DISTRICTS.some(x=>x[0]===last)) dsel.value = last; }catch(e){}
+  let lastLv = 'district', lastBlock = '';
+  try{ lastLv = localStorage.getItem('ad_last_level') === 'block' ? 'block' : 'district'; lastBlock = localStorage.getItem('ad_last_block') || ''; }catch(e){}
+  fillLoginBlocks(lastBlock); setLoginLevel(lastLv);
   document.getElementById('loginPass').addEventListener('keydown', e=>{ if(e.key==='Enter') cloudLogin(); });
   if(!cloudEnabled()) return;
   try{ const msg = sessionStorage.getItem('ad_msg'); if(msg){ document.getElementById('loginErr').textContent = msg; sessionStorage.removeItem('ad_msg'); } }catch(e){}
