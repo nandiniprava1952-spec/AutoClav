@@ -1310,12 +1310,16 @@ function neOnLogin(){
   neRender();
   neCheckDraft();
 }
-async function neClose(){   // closes the form; unfinished work is kept as a 24-hour draft
+async function neClose(){   // closes the form at once; unfinished work is saved as a 24-hour draft in the background
   clearTimeout(NE.saveT);
   const had = Object.keys(NE.vals).length || Object.keys(NE.files).length;
-  if(had && NE.dept){ await neSaveDraft(); }
+  const save = (had && NE.dept) ? neSaveDraft() : null;   // start the save now, but don't wait for the network
   switchView('home'); window.scrollTo({top:0, behavior:'smooth'});
-  if(had) cloudStatus('📝 Entry closed — draft saved for 24 hours. Tap ➕ New entry to continue.', 'ok');
+  if(had){
+    cloudStatus('⏳ Saving draft…', 'ok');
+    try{ if(save) await save; }catch(e){}
+    cloudStatus('✓ Entry closed — draft saved for 24 hours. Tap ➕ New entry to continue.', 'ok');
+  }
 }
 function neOpen(){ if(!neAllowed()) return; switchView('new'); window.scrollTo({top:0, behavior:'smooth'}); neCheckDraft(); }
 function neKey(d){ return d==='sncu' ? 'sncu' : d==='ot' ? 'ot' : 'lr'; }
