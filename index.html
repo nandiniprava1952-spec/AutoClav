@@ -1400,7 +1400,8 @@ function neRender(){
     const v = neVisibleFields();
     html += `<h3 class="ne-h">${L?'ଉପକରଣ':'Equipment'}</h3><div class="ne-grid">` + v.top.map(neFieldHtml).join('') + `</div>`;
     if(v.gate){ html += `<h3 class="ne-h">${L?'ଷ୍ଟେରିଲାଇଜେସନ':'Sterilization'}</h3><div class="ne-grid">` + v.afterDecl.map(neFieldHtml).join('') + `</div>`; }
-    html += `<div id="ne_draft_status" class="ne-sub" style="margin-top:10px">${esc(NE.draftStatus||'')}</div><div id="ne_msg" class="ne-msg"></div><button type="button" class="btn" id="ne_submit" onclick="neSubmit()" style="width:100%; margin-top:6px;">${L?'ଦାଖଲ କରନ୍ତୁ':'Submit entry'}</button>`;
+    html += `<div id="ne_draft_status" class="ne-sub" style="margin-top:10px">${esc(NE.draftStatus||'')}</div><div id="ne_msg" class="ne-msg"></div><button type="button" class="btn" id="ne_submit" onclick="neSubmit()" style="width:100%; margin-top:6px;">${L?'ଦାଖଲ କରନ୍ତୁ':'Submit entry'}</button>` +
+      `<button type="button" class="btn secondary" id="ne_reset" onclick="neReset()" style="width:100%; margin-top:8px;">↺ ${L?'ଫର୍ମ ରିସେଟ୍ କରନ୍ତୁ':'Reset form'}</button>`;
   }else{
     html += `<p class="ne-sub" style="margin-top:14px">Select a department to start the entry.</p>`;
   }
@@ -1589,6 +1590,21 @@ function neValidate(){
     }
   });
   return first;
+}
+
+/* Reset: clears everything entered on this form (values, photos, GPS, saved draft). Facility and department stay selected. */
+async function neReset(){
+  if(NE.busy || !NE.dept) return;
+  const L = NE.lang==='or';
+  if(!confirm(L ? 'ଏହି ଫର୍ମରେ ଥିବା ସମସ୍ତ ତଥ୍ୟ ଲିଭାଯିବ। ଆପଣ ନିଶ୍ଚିତ କି?' : 'Clear everything entered on this form? This cannot be undone.')) return;
+  clearTimeout(NE.saveT);
+  Object.values(NE.files).forEach(x=>{ if(x && x.url) { try{ URL.revokeObjectURL(x.url); }catch(e){} } });
+  const f = NE.fac, d = NE.dept;
+  NE.vals = {}; NE.files = {}; NE.draftInfo = null; NE.draftStatus = '';
+  NE.draftId = neUuid(); NE.startedAt = new Date().toISOString();
+  neRender();
+  window.scrollTo({top:0, behavior:'smooth'});
+  try{ if(f) await cloudCall('draftClear', {facility: f.name, dept: d}); }catch(e){}
 }
 async function neSubmit(){
   if(NE.busy) return;
