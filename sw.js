@@ -1,5 +1,5 @@
 // Bump VERSION on every deploy to force clients to refresh the cache.
-const VERSION = 'v4';
+const VERSION = 'v7';
 const CACHE = 'autoclave-' + VERSION;
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
