@@ -5,7 +5,7 @@
    and restarts. Requests carrying ?__chk=… always go straight to the network (used by those checks).
    The cdnjs libraries (PapaParse, SheetJS, JSZip) are cached too so the app works offline.
    Apps Script / cloud calls are never touched. */
-const CACHE = 'autoclave-v2';            // active app shell
+const CACHE = 'autoclave-v3';            // active app shell
 const STAGE = 'autoclave-stage';         // a downloaded-but-not-yet-installed update (managed by the page)
 const VER   = './__ver.json';            // {etag, lm, size, t} of the index.html held in CACHE
 const SHELL = ['./index.html', './manifest.webmanifest',
