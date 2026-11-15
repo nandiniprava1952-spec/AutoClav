@@ -2524,7 +2524,8 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
 (function(){
   if(window.top!==window.self) return;
   var dip=null;
-  var isApp=function(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;};
+  var IK='autoclave-installed',gI=function(){try{return localStorage.getItem(IK)==='1'}catch(e){return false}},sI=function(v){try{v?localStorage.setItem(IK,'1'):localStorage.removeItem(IK)}catch(e){}};
+  var isApp=function(){var r=(window.matchMedia&&(matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches))||navigator.standalone===true;if(r)sI(1);return r||gI();};
   var ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
   function netUpd(){
     var on=navigator.onLine!==false;
@@ -2544,8 +2545,8 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
   window.addEventListener('online',netUpd);
   window.addEventListener('offline',netUpd);
   document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') netUpd(); });
-  window.addEventListener('beforeinstallprompt',function(e){ e.preventDefault(); dip=e; installUpd(); });
-  window.addEventListener('appinstalled',function(){ dip=null; var w=document.getElementById('loginInstallWrap'); if(w) w.hidden=true; });
+  window.addEventListener('beforeinstallprompt',function(e){ e.preventDefault(); dip=e; sI(0); installUpd(); });
+  window.addEventListener('appinstalled',function(){ dip=null; sI(1); var w=document.getElementById('loginInstallWrap'); if(w) w.hidden=true; });
   netUpd(); installUpd();
 })();
 </script>
