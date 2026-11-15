@@ -38,4 +38,9 @@ Entries are sent with the existing `push` action (flat XLSForm field names, `_uu
 `sw.js` is cache-first (cache `autoclave-v2`): a new `index.html` is not picked up silently. The page compares the `ETag` of `index.html` on the host with its cached copy, downloads the new file into a staging cache, and swaps it in only when **Update** is tapped. Saved entries and the login session live in the browser's own storage and are not touched.
 
 ## Login photo
-The cover/login page shows a photo (labour room). On wide screens it fills the whole screen behind the sign-in card; on phones it runs full width across the top with the card just below it. The photo is embedded in `index.html` as the `data:` URL in `--login-photo` (inside `<style id="login-photo">`); replace that value to change it. It is part of `index.html`, so it works offline and arrives through the normal in-app update flow.
+The cover/login page shows a photo (labour room), always **whole, never cropped**:
+- **Phones:** edge to edge across the top at the photo's own shape, fading only at its bottom edge into a full-width sign-in panel (no floating card).
+- **Tablets:** photo framed above the sign-in card.
+- **Laptops / desktops (1000 px and wider):** photo at full size on the left, sign-in card on the right.
+
+The photo is embedded in `index.html` as the `data:` URL in `--login-photo` (inside `<style id="login-photo">`); replace that value to change it (keep roughly the same 3:2 shape, or change the `aspect-ratio:959/641` values). It is part of `index.html`, so it works offline and arrives through the normal in-app update flow.
