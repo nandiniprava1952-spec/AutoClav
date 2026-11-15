@@ -36,3 +36,6 @@ Entries are sent with the existing `push` action (flat XLSForm field names, `_uu
 4. **After the restart** – *✔ Updated to the latest version* appears briefly.
 
 `sw.js` is cache-first (cache `autoclave-v2`): a new `index.html` is not picked up silently. The page compares the `ETag` of `index.html` on the host with its cached copy, downloads the new file into a staging cache, and swaps it in only when **Update** is tapped. Saved entries and the login session live in the browser's own storage and are not touched.
+
+## Login photo
+The cover/login page shows a photo (labour room). On wide screens it fills the whole screen behind the sign-in card; on phones it runs full width across the top with the card just below it. The photo is embedded in `index.html` as the `data:` URL in `--login-photo` (inside `<style id="login-photo">`); replace that value to change it. It is part of `index.html`, so it works offline and arrives through the normal in-app update flow.
