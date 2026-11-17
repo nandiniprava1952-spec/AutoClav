@@ -1135,7 +1135,7 @@ async function cloudLogin(){
     const out = await cloudCall('login', payload);
     CLOUD = {token: out.token, user: Object.assign({}, out.user, scope)};
     try{ localStorage.setItem('ad_last_district', d); }catch(e){}
-    try{ sessionStorage.setItem('ad_cloud', JSON.stringify(CLOUD)); }catch(e){}
+    try{ (function(k,v){try{localStorage.setItem(k,v)}catch(_){sessionStorage.setItem(k,v)}})('ad_cloud', JSON.stringify(CLOUD)); }catch(e){}
     document.getElementById('loginPass').value = '';
     cloudAfterLogin();
   }catch(e){ errEl.textContent = e.message; }
@@ -1171,7 +1171,7 @@ function cloudAfterLogin(){
 function cloudLogout(reason){
   if(CLOUD && !reason){ try{ fetch(CLOUD_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({action:'logout', token: CLOUD.token})}); }catch(e){} }
   CLOUD = null;
-  try{ sessionStorage.removeItem('ad_cloud'); if(reason) sessionStorage.setItem('ad_msg', reason); }catch(e){}
+  try{ sessionStorage.removeItem('ad_cloud'); localStorage.removeItem('ad_cloud'); if(reason) sessionStorage.setItem('ad_msg', reason); }catch(e){}
   location.reload();   // wipes the loaded data from memory
 }
 
@@ -1716,7 +1716,7 @@ async function neSubmit(){
   if(!cloudEnabled()) return;
   try{ const msg = sessionStorage.getItem('ad_msg'); if(msg){ document.getElementById('loginErr').textContent = msg; sessionStorage.removeItem('ad_msg'); } }catch(e){}
   let saved = null;
-  try{ saved = JSON.parse(sessionStorage.getItem('ad_cloud') || 'null'); }catch(e){}
+  try{ saved = JSON.parse(localStorage.getItem('ad_cloud') || sessionStorage.getItem('ad_cloud') || 'null'); }catch(e){}
   if(saved && saved.token && saved.user && saved.user.role !== 'block'){ CLOUD = saved; cloudAfterLogin(); }
   else { document.getElementById('loginOverlay').style.display = 'flex'; (dsel.value ? document.getElementById('loginPass') : dsel).focus(); cloudPing(); }
 })();
@@ -2748,6 +2748,26 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
       setInterval(check,EVERY);                                                                  /* every 30 minutes */
     })();
   }
+})();
+</script>
+<style id="netfloat-style">
+.netfloat{position:fixed;right:12px;min-width:84px;box-sizing:border-box;justify-content:center;pointer-events:none;padding:4px 9px;font-size:11.5px}
+@media print{.netfloat{display:none !important}}
+.netfloat{top:12px;z-index:150}
+html body #signOutBtn{right:104px !important}
+</style>
+<script>
+/* Online (green) / Offline (amber) pill, top-right, visible after login (top-level page only) */
+(function(){
+  if(window.top!==window.self) return;
+  var el=document.createElement('span');
+  el.className='netpill netfloat'; el.setAttribute('role','status'); el.setAttribute('aria-live','polite');
+  el.innerHTML='<i></i><span>Online</span>';
+  function upd(){ var on=navigator.onLine!==false; el.classList.toggle('off',!on); el.lastElementChild.textContent=on?'Online':'Offline'; el.setAttribute('aria-label',on?'Online':'Offline'); }
+  function add(){ if(!el.parentNode) document.body.appendChild(el); upd(); }
+  if(document.body) add(); else document.addEventListener('DOMContentLoaded',add);
+  window.addEventListener('online',upd); window.addEventListener('offline',upd);
+  document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') upd(); });
 })();
 </script>
 </body>
